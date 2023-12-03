@@ -8,6 +8,7 @@ import static org.apache.jena.riot.Lang.TTL;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.function.Predicate;
 
 import org.apache.jena.graph.Graph;
@@ -20,7 +21,8 @@ import org.iotdata.exception.InvalidInputDirectoryException;
  * Class with method that allow to parse the resource files
  */
 public class FileReader {
-	private static final Predicate<Path> isTTL = path -> TTL.getFileExtensions()
+
+	private static final Predicate<Path> isExtensionTTL = path -> TTL.getFileExtensions()
 			.contains(getExtension(path.toString()));
 
 	/**
@@ -32,11 +34,13 @@ public class FileReader {
 	public static StreamRDF readTTLsFromDirectoryToStream(final String filePath, final Graph graph) {
 		try {
 			//TODO add spring here
-			final Path directoryPath = Path.of("/path/here");
+			final Path directoryPath = Path.of(filePath);
 
 			final StreamRDF rdfStream = StreamRDFLib.graph(graph);
 
-			Files.walk(directoryPath, FOLLOW_LINKS).filter(Files::isRegularFile).filter(isTTL)
+			Files.walk(directoryPath, FOLLOW_LINKS)
+					.filter(Files::isRegularFile)
+					.filter(isExtensionTTL)
 					.forEach(path -> RDFDataMgr.parse(rdfStream, path.toUri().getPath()));
 			return rdfStream;
 
