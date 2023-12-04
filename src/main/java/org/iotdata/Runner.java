@@ -12,6 +12,6 @@ public class Runner {
 
         var tagAnalysisService = new TagsAnalysisService(graph);
         tagAnalysisService.performExploratoryAnalysisIdentifier();
-        tagAnalysisService.performExploratoryAnalysisBattery();
+        tagAnalysisService.performExploratoryAnalysisWatch();
     }
 }
