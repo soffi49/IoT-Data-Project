@@ -19,6 +19,9 @@ public enum PrefixType {
 	RDFS("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
 	RDF("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"),
 
+	MEASURE("msr", "http://www.ontology-of-units-of-measure.org/resource/om-2/" ),
+	AIOT("aiot", "https://assist-iot.eu/ontologies/aiot#" ),
+
 	// prefixes used in specific dataset types
 	CAMERA("camera", "https://assist-iot.eu/pilot2_rdf/sensor/camera/");
 
