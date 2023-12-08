@@ -1,12 +1,12 @@
 package org.iotdata;
 
-import static org.iotdata.reader.FileReader.readTTLsFromDirectoryToStream;
+import static org.iotdata.enums.DatasetType.CAMERAS;
 
-import org.apache.jena.sparql.graph.GraphFactory;
+import org.iotdata.processing.RDFStreamProcessing;
 
 public class Runner {
 	public static void main(String[] args) {
-		var graph = GraphFactory.createDefaultGraph();
-		readTTLsFromDirectoryToStream("/cameras", graph);
+		final RDFStreamProcessing streamProcessor = new RDFStreamProcessing(CAMERAS);
+		streamProcessor.processRDFStream();
 	}
 }
