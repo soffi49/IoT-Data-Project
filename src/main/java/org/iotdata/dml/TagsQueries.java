@@ -11,9 +11,14 @@ public class TagsQueries {
 			""";
 
 	public static final String SELECT_DAYS_WITH_WATCH_CONNECTED = """
-			SELECT ?timeStamp ?isConnected
+			SELECT ?timeStamp ?isConnected ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
@@ -23,9 +28,14 @@ public class TagsQueries {
 			""";
 
 	public static final String SELECT_DAYS_WITH_HEART_RATE = """
-			SELECT ?timeStamp ?heartRate
+			SELECT ?timeStamp ?heartRate ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
@@ -36,9 +46,14 @@ public class TagsQueries {
 			""";
 
 	public static final String SELECT_DAYS_WITH_WATCH_BATTERY_LEVELS = """
-			SELECT ?timeStamp ?batteryLevel
+			SELECT ?timeStamp ?batteryLevel ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
@@ -48,23 +63,32 @@ public class TagsQueries {
 			""";
 
 	public static final String SELECT_DAYS_WITH_ALARM = """
-			SELECT ?timeStamp ?alarm
+			SELECT ?timeStamp ?alarm ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
 			?resultNode a iot:TagMetadataResult ;
 				iot:hasAlarm ?alarm .
 			
-			FILTER (?alarm = true)
 			}
 			""";
 
 	public static final String SELECT_DAYS_WITH_LOCATIONS = """
-			SELECT ?timeStamp ?xValue ?yValue ?zValue ?accuracyValue
+			SELECT ?timeStamp ?xValue ?yValue ?zValue ?accuracyValue ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+				?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
