@@ -49,7 +49,7 @@ public class Runner {
 					final int currentBatchSize = batchSize.incrementAndGet();
 					final String nextModelName = format("%s%d", "-", currentBatchSize);
 					Dataset dataset = TDB2Factory.createDataset();
-					dataset.begin(ReadWrite.READ);
+					dataset.begin(ReadWrite.WRITE);
 					dataset.addNamedModel(nextModelName, a);
 					tagsAnalyzer.performAnalysis(dataset);
 					dataset.commit();
