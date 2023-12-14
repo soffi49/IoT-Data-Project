@@ -104,7 +104,7 @@ public class TagsAnalyzer implements AbstractAnalyzer {
 	}
 
 	/**
-	 * Method executes the specifies on the dataset
+	 * Method executes the specified query on the dataset
 	 *
 	 * @param dataset dataset on which query is to be executed
 	 * @param query query that will be executed on the dataset
