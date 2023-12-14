@@ -1,4 +1,4 @@
-package org.iotdata.dml;
+package org.iotdata.constants.dml;
 
 /**
  * Class containing queries used to analyse camera dataset
@@ -17,4 +17,5 @@ public class CamerasQueries {
 			}
 			ORDER BY DESC(?unsafeWorkersNum)
 			""";
+
 }
