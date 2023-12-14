@@ -11,68 +11,92 @@ public class TagsQueries {
 			""";
 
 	public static final String SELECT_DAYS_WITH_WATCH_CONNECTED = """
-			SELECT ?timeStamp ?isConnected
+			SELECT ?timeStamp ?isConnected ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
-			?resultNode a iot:TagMetadataResult ;
-				iot:hasWatchConnected ?isConnected .
+			?resultNode a aiotp2:TagMetadataResult ;
+				aiotp2:hasWatchConnected ?isConnected .
 			}
 			""";
 
 	public static final String SELECT_DAYS_WITH_HEART_RATE = """
-			SELECT ?timeStamp ?heartRate
+			SELECT ?timeStamp ?heartRate ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
 			?resultNode a msr:Measure ;
-				msr:Unit iot:bpm ;
+				msr:Unit aiotp2:bpm ;
 				msr:hasNumericalValue ?heartRate .
 			}
 			""";
 
 	public static final String SELECT_DAYS_WITH_WATCH_BATTERY_LEVELS = """
-			SELECT ?timeStamp ?batteryLevel
+			SELECT ?timeStamp ?batteryLevel ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
-			?resultNode a iot:TagMetadataResult ;
-				iot:hasWatchBatteryLevel ?batteryLevel .
+			?resultNode a aiotp2:TagMetadataResult ;
+				aiotp2:hasWatchBatteryLevel ?batteryLevel .
 			}
 			""";
 
 	public static final String SELECT_DAYS_WITH_ALARM = """
-			SELECT ?timeStamp ?alarm
+			SELECT ?timeStamp ?alarm ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+			?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
-			?resultNode a iot:TagMetadataResult ;
-				iot:hasAlarm ?alarm .
+			?resultNode a aiotp2:TagMetadataResult ;
+				aiotp2:hasAlarm ?alarm .
 			
-			FILTER (?alarm = true)
 			}
 			""";
 
 	public static final String SELECT_DAYS_WITH_LOCATIONS = """
-			SELECT ?timeStamp ?xValue ?yValue ?zValue ?accuracyValue
+			SELECT ?timeStamp ?xValue ?yValue ?zValue ?accuracyValue ?identifier
 			WHERE {
-			?subject a sosa:Observation ;
+				?subject schema:identifier ?identifier ;
+				sosa:hosts ?sensor .
+				
+			?sensor sosa:madeObservation ?observation .
+			
+			?observation a sosa:Observation ;
 				sosa:resultTime ?timeStamp ;
 				sosa:hasResult ?resultNode .
 				
-			?resultNode a iot:BIMLocation ;
-				iot:hasXValue ?xValueNode ;
-				iot:hasYValue ?yValueNode ;
-				iot:hasZValue ?zValueNode ;
-				iot:hasAccuracyValue ?accuracyValueNode .
+			?resultNode a aiotp2:BIMLocation ;
+				aiotp2:hasXValue ?xValueNode ;
+				aiotp2:hasYValue ?yValueNode ;
+				aiotp2:hasZValue ?zValueNode ;
+				aiotp2:hasAccuracyValue ?accuracyValueNode .
 				
 			?xValueNode a msr:Measure ;
 				msr:Unit msr:millimetre ;

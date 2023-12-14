@@ -3,7 +3,7 @@ package org.iotdata.analysis;
 import org.apache.jena.query.*;
 import org.apache.jena.sparql.core.Prologue;
 import org.iotdata.enums.PrefixType;
-import org.iotdata.utils.Helper;
+import org.iotdata.utils.DirectoryModifier;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -37,8 +37,8 @@ public class TagsAnalyzer implements AbstractAnalyzer {
 
 	private void processResults(String directoryName, ResultSet resultSet, int currentIndex) throws IOException {
 		String basePath = "src/main/resources/results/";
-		Helper.constructDirectory(basePath, directoryName);
-		try (OutputStream output = new FileOutputStream(Helper.constructName(basePath, directoryName, currentIndex))) {
+		DirectoryModifier.constructDirectory(basePath, directoryName);
+		try (OutputStream output = new FileOutputStream(DirectoryModifier.constructName(basePath, directoryName, currentIndex))) {
 			ResultSetFormatter.outputAsCSV(output, resultSet);
 		}
 	}
@@ -50,7 +50,7 @@ public class TagsAnalyzer implements AbstractAnalyzer {
 	 * @return set of timestamps with respective heart rates
 	 */
 	private ResultSet selectDaysWithHeartRate(final Dataset dataset) {
-		return selectData(dataset, SELECT_DAYS_WITH_HEART_RATE, SOSA, IOT_ONTO , MEASURE);
+		return selectData(dataset, SELECT_DAYS_WITH_HEART_RATE, SOSA, AIOT_P2 , MEASURE, SCHEMA);
 	}
 
 	/**
@@ -60,7 +60,7 @@ public class TagsAnalyzer implements AbstractAnalyzer {
 	 * @return set of timestamps with respective battery levels
 	 */
 	private ResultSet selectDaysWithWatchBatteryLevels(final Dataset dataset) {
-		return selectData(dataset, SELECT_DAYS_WITH_WATCH_BATTERY_LEVELS, SOSA, IOT_ONTO);
+		return selectData(dataset, SELECT_DAYS_WITH_WATCH_BATTERY_LEVELS, SOSA, AIOT_P2, SCHEMA);
 	}
 
 	/**
@@ -70,7 +70,7 @@ public class TagsAnalyzer implements AbstractAnalyzer {
 	 * @return set of timestamps when the alarm was triggered
 	 */
 	private ResultSet selectDaysWithAlarm(final Dataset dataset) {
-		return selectData(dataset, SELECT_DAYS_WITH_ALARM, SOSA, IOT_ONTO);
+		return selectData(dataset, SELECT_DAYS_WITH_ALARM, SOSA, AIOT_P2, SCHEMA);
 	}
 
 	/**
@@ -80,7 +80,7 @@ public class TagsAnalyzer implements AbstractAnalyzer {
 	 * @return set of timestamps with respective locations in the BIM model
 	 */
 	private ResultSet selectDaysWithLocations(final Dataset dataset) {
-		return selectData(dataset, SELECT_DAYS_WITH_LOCATIONS, SOSA, IOT_ONTO, MEASURE);
+		return selectData(dataset, SELECT_DAYS_WITH_LOCATIONS, SOSA, AIOT_P2, MEASURE, SCHEMA);
 	}
 
 	/**
@@ -100,7 +100,7 @@ public class TagsAnalyzer implements AbstractAnalyzer {
 	 * @return set of timestamps with the status of connection of the watch
 	 */
 	private ResultSet selectDaysWithWatchConnected(final Dataset dataset) {
-		return selectData(dataset, SELECT_DAYS_WITH_WATCH_CONNECTED, SOSA, IOT_ONTO);
+		return selectData(dataset, SELECT_DAYS_WITH_WATCH_CONNECTED, SOSA, AIOT_P2, SCHEMA);
 	}
 
 	/**
