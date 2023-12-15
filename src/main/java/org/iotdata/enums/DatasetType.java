@@ -1,8 +1,8 @@
 package org.iotdata.enums;
 
-import org.iotdata.analysis.AbstractAnalyzer;
-import org.iotdata.analysis.CamerasAnalyzer;
-import org.iotdata.analysis.TagsAnalyzer;
+import org.iotdata.domain.analyzer.AbstractAnalyzer;
+import org.iotdata.domain.analyzer.CamerasAnalyzer;
+import org.iotdata.domain.analyzer.TagsAnalyzer;
 
 import lombok.Getter;
 

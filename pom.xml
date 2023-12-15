@@ -44,6 +44,12 @@
 			<type>pom</type>
 			<version>4.10.0</version>
 		</dependency>
+		<!-- Pekko stream -->
+		<dependency>
+			<groupId>org.apache.pekko</groupId>
+			<artifactId>pekko-stream_3</artifactId>
+			<version>1.0.2</version>
+		</dependency>
 		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
