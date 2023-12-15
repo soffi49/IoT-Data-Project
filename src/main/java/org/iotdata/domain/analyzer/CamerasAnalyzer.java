@@ -1,8 +1,7 @@
 package org.iotdata.domain.analyzer;
 
 import static org.iotdata.constants.dml.CamerasQueries.SELECT_DAYS_WITH_UNSAFE_WORKERS;
-import static org.iotdata.enums.PrefixType.IOT_ONTO;
-import static org.iotdata.enums.PrefixType.SOSA;
+import static org.iotdata.enums.PrefixType.*;
 import static org.iotdata.utils.QueryExecutor.executeQuery;
 
 import org.apache.jena.query.Dataset;
@@ -14,7 +13,7 @@ import org.apache.jena.query.ResultSet;
 public class CamerasAnalyzer implements AbstractAnalyzer {
 
 	@Override
-	public void performAnalysis(final Dataset dataset) {
+	public void performAnalysis(final Dataset dataset, final String outputPath) {
 		selectDaysWithUnsafeWorkers(dataset);
 	}
 
@@ -25,6 +24,6 @@ public class CamerasAnalyzer implements AbstractAnalyzer {
 	 * @return result set of unsafe workers
 	 */
 	private ResultSet selectDaysWithUnsafeWorkers(final Dataset dataset) {
-		return executeQuery(dataset, SELECT_DAYS_WITH_UNSAFE_WORKERS, SOSA, IOT_ONTO);
+		return executeQuery(dataset, SELECT_DAYS_WITH_UNSAFE_WORKERS, SOSA, AIOT_P2);
 	}
 }

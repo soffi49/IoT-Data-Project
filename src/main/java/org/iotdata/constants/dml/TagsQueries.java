@@ -1,4 +1,4 @@
-package org.iotdata.dml;
+package org.iotdata.constants.dml;
 
 /**
  * Class containing queries used to analyse tags dataset
@@ -24,6 +24,8 @@ public class TagsQueries {
 				
 			?resultNode a aiotp2:TagMetadataResult ;
 				aiotp2:hasWatchConnected ?isConnected .
+				
+			FILTER (?isConnected = true)
 			}
 			""";
 
