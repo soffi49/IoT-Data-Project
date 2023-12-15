@@ -1,4 +1,4 @@
-package org.iotdata.analysis;
+package org.iotdata.domain.analyzer;
 
 import org.apache.jena.query.*;
 import org.apache.jena.sparql.core.Prologue;
