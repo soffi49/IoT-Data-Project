@@ -12,5 +12,5 @@ public interface AbstractAnalyzer {
 	 *
 	 * @param dataset dataset that is being analysed
 	 */
-	void performAnalysis(final Dataset dataset);
+	void performAnalysis(final Dataset dataset, final String outputPath);
 }

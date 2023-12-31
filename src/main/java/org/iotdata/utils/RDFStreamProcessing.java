@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static org.iotdata.utils.TTLReader.readTTLsFromDirectoryToStream;
 
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,6 +30,7 @@ public class RDFStreamProcessing {
 	private final int maxBatchSize;
 	private final DatasetType dataType;
 	private final Source<Path, NotUsed> ttlStream;
+	private final String outputPath;
 
 	/**
 	 * Default constructor
@@ -37,10 +39,11 @@ public class RDFStreamProcessing {
 	 * @param maxBatchSize maximum size of the batch used in RDF stream processing
 	 * @apiNote data type is used to select appropriate analysis and pre-processing methods
 	 */
-	public RDFStreamProcessing(final DatasetType dataType, final int maxBatchSize) {
+	public RDFStreamProcessing(final DatasetType dataType, final int maxBatchSize, final String outputPath) {
 		this.ttlStream = readTTLsFromDirectoryToStream(dataType.getDirName());
 		this.maxBatchSize = maxBatchSize;
 		this.dataType = dataType;
+		this.outputPath = outputPath;
 	}
 
 	/**
@@ -49,16 +52,15 @@ public class RDFStreamProcessing {
 	 */
 	public void processRDFStream() {
 		final AtomicInteger batchSize = new AtomicInteger(0);
-		final Dataset dataset = TDB2Factory.createDataset();
-		final ActorSystem system = ActorSystem.create(dataType.getDirName());
+		final ActorSystem system = ActorSystem.create(dataType.name());
 
 		final Flow<Path, List<Model>, NotUsed> createModels = Flow.of(Path.class)
 				.map(this::createModelFromTTL)
 				.grouped(maxBatchSize);
 
 		final CompletionStage<Done> streamFinish =
-				ttlStream.via(createModels.async())
-						.runForeach(model -> processDataset(model, dataset, batchSize), system);
+				ttlStream.via(createModels)
+						.runForeach(model -> processDataset(model, batchSize), system);
 
 		streamFinish.thenRun(system::terminate);
 
@@ -67,16 +69,16 @@ public class RDFStreamProcessing {
 	private Model createModelFromTTL(final Path path) {
 		final Model model = ModelFactory.createDefaultModel();
 		RDFDataMgr.read(model, path.toUri().getPath());
+		System.out.println(Instant.now() + " " + path);
 		return model;
 	}
 
-	private void processDataset(final List<Model> models, final Dataset dataset, final AtomicInteger batchSize) {
+	private void processDataset(final List<Model> models, final AtomicInteger batchSize) {
+		final Dataset dataset = TDB2Factory.createDataset();
 		models.forEach(model -> addNextModel(model, dataset, batchSize.incrementAndGet()));
-		dataset.begin(ReadWrite.WRITE);
+		dataset.begin(ReadWrite.READ);
 		try {
-			dataType.getDataAnalyzer().performAnalysis(dataset);
-			dataset.listModelNames().forEachRemaining(dataset::removeNamedModel);
-			dataset.commit();
+			dataType.getDataAnalyzer().performAnalysis(dataset, outputPath);
 		} finally {
 			dataset.end();
 		}
@@ -85,7 +87,6 @@ public class RDFStreamProcessing {
 
 	private void addNextModel(final Model model, final Dataset dataset, final int currentBatchSize) {
 		final String nextModelName = format("%s%d", dataType.name(), currentBatchSize);
-
 		dataset.begin(ReadWrite.WRITE);
 		try {
 			dataset.addNamedModel(nextModelName, model);
@@ -93,7 +94,6 @@ public class RDFStreamProcessing {
 		} finally {
 			dataset.end();
 		}
-
 	}
 
 }

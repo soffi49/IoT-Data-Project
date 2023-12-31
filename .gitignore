@@ -2,5 +2,8 @@
 /.idea/**/*
 /src/main/resources/cameras
 /src/main/resources/tags
+/src/main/resources/weather
+/src/main/resources/results
+/results
 /target
 /out

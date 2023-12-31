@@ -47,7 +47,7 @@ public class ConfigurationProps {
 	 *
 	 * @return output path
 	 */
-	public int getOutputPath() {
-		return parseInt(properties.getProperty(OUTPUT_PATH));
+	public String getOutputPath() {
+		return properties.getProperty(OUTPUT_PATH);
 	}
 }

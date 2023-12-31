@@ -24,8 +24,7 @@ public class QueryExecutor {
 	 */
 	public static ResultSet executeQuery(final Dataset dataset, final String query, final PrefixType... prefixes) {
 		final Prologue prologue = createPrefixPrologue(prefixes);
-		try (QueryExecution queryExecution = createQueryFromNamedModels(dataset, query, prologue)) {
-			return queryExecution.execSelect();
-		}
+		QueryExecution queryExecution = createQueryFromNamedModels(dataset, query, prologue);
+		return queryExecution.execSelect();
 	}
 }

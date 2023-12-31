@@ -14,10 +14,13 @@ import lombok.Getter;
 public enum PrefixType {
 
 	SOSA("sosa", "http://www.w3.org/ns/sosa/"),
-	IOT_ONTO("iot", "https://assist-iot.eu/ontologies/aiot_p2#"),
+	AIOT_P2("aiotp2", "https://assist-iot.eu/ontologies/aiot_p2#"),
 	SCHEMA("schema", "http://schema.org/"),
 	RDFS("rdfs", "http://www.w3.org/2000/01/rdf-schema#"),
 	RDF("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"),
+
+	MEASURE("msr", "http://www.ontology-of-units-of-measure.org/resource/om-2/" ),
+	AIOT("aiot", "https://assist-iot.eu/ontologies/aiot#" ),
 
 	// prefixes used in specific dataset types
 	CAMERA("camera", "https://assist-iot.eu/pilot2_rdf/sensor/camera/");
