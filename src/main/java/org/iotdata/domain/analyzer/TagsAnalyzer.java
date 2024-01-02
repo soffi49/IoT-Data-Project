@@ -1,47 +1,43 @@
 package org.iotdata.domain.analyzer;
 
-import org.apache.jena.query.*;
-import org.iotdata.utils.DirectoryModifier;
-
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.iotdata.constants.dml.TagsQueries.*;
-import static org.iotdata.enums.PrefixType.*;
+import static org.iotdata.constants.dml.TagsQueries.SELECT_DAYS_WITH_ALARM;
+import static org.iotdata.constants.dml.TagsQueries.SELECT_DAYS_WITH_HEART_RATE;
+import static org.iotdata.constants.dml.TagsQueries.SELECT_DAYS_WITH_LOCATIONS;
+import static org.iotdata.constants.dml.TagsQueries.SELECT_DAYS_WITH_WATCH_BATTERY_LEVELS;
+import static org.iotdata.constants.dml.TagsQueries.SELECT_DAYS_WITH_WATCH_CONNECTED;
+import static org.iotdata.constants.dml.TagsQueries.SELECT_UNIQUE_IDENTIFIERS;
+import static org.iotdata.enums.PrefixType.AIOT_P2;
+import static org.iotdata.enums.PrefixType.MEASURE;
+import static org.iotdata.enums.PrefixType.SCHEMA;
+import static org.iotdata.enums.PrefixType.SOSA;
 import static org.iotdata.utils.QueryExecutor.executeQuery;
+import static org.iotdata.utils.OutputWriter.storeResultsInSeparateFiles;
+
+import org.apache.jena.query.Dataset;
+import org.apache.jena.query.ResultSet;
 
 /**
  * Class containing methods used to analyse the tags datasets
  */
-public class TagsAnalyzer implements AbstractAnalyzer {
-	private final AtomicInteger namingIndex = new AtomicInteger(0);
+public class TagsAnalyzer extends AbstractAnalyzer {
 
-	@Override
-	public void performAnalysis(final Dataset dataset, final String outputPath) {
-		final int currentIndex = namingIndex.incrementAndGet();
-		try {
-			processResults("results_identifier", selectUniqueIdentifiers(dataset), currentIndex, outputPath);
-			processResults("results_days_watch_connected", selectDaysWithWatchConnected(dataset), currentIndex,
-					outputPath);
-			processResults("results_days_heart_rate", selectDaysWithHeartRate(dataset), currentIndex, outputPath);
-			processResults("results_days_watch_battery_level", selectDaysWithWatchBatteryLevels(dataset), currentIndex,
-					outputPath);
-			processResults("result_days_alarm", selectDaysWithAlarm(dataset), currentIndex, outputPath);
-			processResults("result_days_locations", selectDaysWithLocations(dataset), currentIndex, outputPath);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+	public TagsAnalyzer(final String outputPath) {
+		super(outputPath);
 	}
 
-	private void processResults(String directoryName, ResultSet resultSet, int currentIndex, String outputPath)
-			throws IOException {
-		DirectoryModifier.constructDirectory(outputPath, directoryName);
-		try (OutputStream output = new FileOutputStream(
-				DirectoryModifier.constructName(outputPath, directoryName, currentIndex))) {
-			ResultSetFormatter.outputAsCSV(output, resultSet);
-		}
+	@Override
+	public void performAnalysis(final Dataset dataset) {
+		super.performAnalysis(dataset);
+
+		final int index = indexOfSingularResultsFile.get();
+		storeResultsInSeparateFiles("results_identifier", selectUniqueIdentifiers(dataset), outputPath, index);
+		storeResultsInSeparateFiles("results_days_watch_connected", selectDaysWithWatchConnected(dataset), outputPath,
+				index);
+		storeResultsInSeparateFiles("results_days_heart_rate", selectDaysWithHeartRate(dataset), outputPath, index);
+		storeResultsInSeparateFiles("results_days_watch_battery_level", selectDaysWithWatchBatteryLevels(dataset),
+				outputPath, index);
+		storeResultsInSeparateFiles("result_days_alarm", selectDaysWithAlarm(dataset), outputPath, index);
+		storeResultsInSeparateFiles("result_days_locations", selectDaysWithLocations(dataset), outputPath, index);
 	}
 
 	/**
