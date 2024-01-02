@@ -2,9 +2,9 @@ package org.iotdata.utils;
 
 import static java.lang.String.format;
 import static org.iotdata.utils.TTLReader.readTTLsFromDirectoryToStream;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,30 +20,37 @@ import org.apache.pekko.NotUsed;
 import org.apache.pekko.actor.ActorSystem;
 import org.apache.pekko.stream.javadsl.Flow;
 import org.apache.pekko.stream.javadsl.Source;
+import org.iotdata.domain.analyzer.AbstractAnalyzer;
 import org.iotdata.enums.DatasetType;
+import org.slf4j.Logger;
 
 /**
  * Class contains method used to process given RDF stream
  */
 public class RDFStreamProcessing {
 
+	private static final Logger logger = getLogger(RDFStreamProcessing.class);
+
 	private final int maxBatchSize;
 	private final DatasetType dataType;
+	private final AbstractAnalyzer analyzer;
 	private final Source<Path, NotUsed> ttlStream;
-	private final String outputPath;
 
 	/**
 	 * Default constructor
 	 *
 	 * @param dataType     type of data set that is being processed
 	 * @param maxBatchSize maximum size of the batch used in RDF stream processing
+	 * @param outputPath   path to the file in which the results of analysis are to be stored
+	 * @param inputPath    path to the input files
 	 * @apiNote data type is used to select appropriate analysis and pre-processing methods
 	 */
-	public RDFStreamProcessing(final DatasetType dataType, final int maxBatchSize, final String outputPath) {
-		this.ttlStream = readTTLsFromDirectoryToStream(dataType.getDirName());
+	public RDFStreamProcessing(final DatasetType dataType, final int maxBatchSize, final String outputPath,
+			final String inputPath) {
+		this.ttlStream = readTTLsFromDirectoryToStream(dataType.getDirName(), inputPath);
 		this.maxBatchSize = maxBatchSize;
 		this.dataType = dataType;
-		this.outputPath = outputPath;
+		this.analyzer = dataType.getDataAnalyzer().apply(outputPath);
 	}
 
 	/**
@@ -51,38 +58,36 @@ public class RDFStreamProcessing {
 	 * (i.e. processing consecutive RDF graphs captured within single sliding window)
 	 */
 	public void processRDFStream() {
-		final AtomicInteger batchSize = new AtomicInteger(0);
 		final ActorSystem system = ActorSystem.create(dataType.name());
 
 		final Flow<Path, List<Model>, NotUsed> createModels = Flow.of(Path.class)
 				.map(this::createModelFromTTL)
-				.grouped(maxBatchSize);
+				.sliding(maxBatchSize, 1);
 
-		final CompletionStage<Done> streamFinish =
-				ttlStream.via(createModels)
-						.runForeach(model -> processDataset(model, batchSize), system);
-
+		final CompletionStage<Done> streamFinish = ttlStream.via(createModels).runForeach(this::processDataset, system);
 		streamFinish.thenRun(system::terminate);
 
 	}
 
 	private Model createModelFromTTL(final Path path) {
+		logger.info("Processing {} file.", path);
+
 		final Model model = ModelFactory.createDefaultModel();
 		RDFDataMgr.read(model, path.toUri().getPath());
-		System.out.println(Instant.now() + " " + path);
 		return model;
 	}
 
-	private void processDataset(final List<Model> models, final AtomicInteger batchSize) {
+	private void processDataset(final List<Model> models) {
 		final Dataset dataset = TDB2Factory.createDataset();
+		final AtomicInteger batchSize = new AtomicInteger(0);
+
 		models.forEach(model -> addNextModel(model, dataset, batchSize.incrementAndGet()));
 		dataset.begin(ReadWrite.READ);
 		try {
-			dataType.getDataAnalyzer().performAnalysis(dataset, outputPath);
+			analyzer.performAnalysis(dataset);
 		} finally {
 			dataset.end();
 		}
-		batchSize.set(0);
 	}
 
 	private void addNextModel(final Model model, final Dataset dataset, final int currentBatchSize) {
