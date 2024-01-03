@@ -1,6 +1,6 @@
 package org.iotdata.domain.function.cameras;
 
-import static org.apache.commons.lang3.StringUtils.capitalize;
+import static java.lang.Math.max;
 import static org.apache.jena.sparql.expr.NodeValue.makeInteger;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,30 +12,29 @@ import org.iotdata.domain.function.CustomFunction;
 /**
  * Function used to count the number of workers of specific type detected by the camera
  */
-public class CountWorkers extends FunctionBase2 implements CameraAggregationFunction {
+public class MaxUnsafeWorkers extends FunctionBase2 implements CameraAggregationFunction {
 
-	final AtomicLong currentWorkersCount;
-	final String counterTypeName;
+	final AtomicLong currentMaxValue;
 
-	public CountWorkers(final Object... params) {
+	public MaxUnsafeWorkers(final Object... params) {
 		super();
-		this.currentWorkersCount = (AtomicLong) params[0];
-		this.counterTypeName = (String) params[1];
+		this.currentMaxValue = (AtomicLong) params[0];
 	}
 
 	@Override
 	public String getName() {
-		return "countWorkers" + capitalize(counterTypeName);
+		return "maxUnsafeWorkers";
 	}
 
 	@Override
 	public CustomFunction constructInitialized() {
-		return new CountWorkers(currentWorkersCount, counterTypeName);
+		return new MaxUnsafeWorkers(currentMaxValue);
 	}
 
 	@Override
 	public NodeValue executeForOngoingEvent(final Object... params) {
-		return makeInteger(currentWorkersCount.addAndGet((long) params[0]));
+		final long workersNumber = (long) params[0];
+		return makeInteger(currentMaxValue.updateAndGet(currVal -> max(currVal, workersNumber)));
 	}
 
 	@Override
@@ -46,15 +45,17 @@ public class CountWorkers extends FunctionBase2 implements CameraAggregationFunc
 	@Override
 	public NodeValue executeForStartEvent(final Object... params) {
 		final long workersNumber = (long) params[0];
-		currentWorkersCount.set(workersNumber);
+		currentMaxValue.set(workersNumber);
 		return makeInteger(workersNumber);
 	}
 
 	@Override
 	public NodeValue executeForFinishEvent(final Object... params) {
 		final long workersNumber = (long) params[0];
-		final NodeValue finalWorkersCount = makeInteger(currentWorkersCount.addAndGet(workersNumber));
-		currentWorkersCount.set(0);
+		final long newMaxValue = currentMaxValue.updateAndGet(currVal -> max(currVal, workersNumber));
+
+		final NodeValue finalWorkersCount = makeInteger(newMaxValue);
+		currentMaxValue.set(0);
 		return finalWorkersCount;
 	}
 

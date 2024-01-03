@@ -1,7 +1,7 @@
 package org.iotdata.domain.function.cameras;
 
 import static org.apache.jena.sparql.expr.NodeValue.makeDateTime;
-import static org.apache.jena.sparql.expr.NodeValue.xmlDatatypeFactory;
+import static org.iotdata.utils.CalendarInitializer.initializeCalendar;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -10,45 +10,57 @@ import javax.xml.datatype.XMLGregorianCalendar;
 import org.apache.jena.sparql.expr.NodeValue;
 import org.apache.jena.sparql.function.FunctionBase2;
 import org.iotdata.domain.function.CustomFunction;
-import org.iotdata.enums.EventStateType;
 
 /**
  * Function used to map the time of first measurement after which consecutive measurements
- * indicating unsafe workers were detected
+ * indicating series of unsafe workers were detected
  */
-public class MapEventStartTime extends FunctionBase2 implements CustomFunction {
+public class MapEventStartTime extends FunctionBase2 implements CameraAggregationFunction {
 
-	private static final AtomicReference<XMLGregorianCalendar> startTime = new AtomicReference<>(
-			xmlDatatypeFactory.newXMLGregorianCalendar());
+	final AtomicReference<XMLGregorianCalendar> startTime;
 
-	public MapEventStartTime() {
+	public MapEventStartTime(final Object... params) {
 		super();
+		this.startTime = (AtomicReference<XMLGregorianCalendar>) params[0];
 	}
 
+	@Override
 	public String getName() {
 		return "mapEventStartTime";
 	}
 
 	@Override
-	public NodeValue exec(final NodeValue eventState, final NodeValue measurementTime) {
-		final XMLGregorianCalendar time = measurementTime.getDateTime();
-
-		return switch (EventStateType.valueOf(eventState.asString())) {
-			case START_EVENT -> startEvent(time);
-			case ONGOING -> makeDateTime(startTime.get());
-			case FINISH_EVENT -> finishEvent();
-			case NO_EVENT -> makeDateTime(time);
-		};
+	public CustomFunction constructInitialized() {
+		return new MapEventStartTime(startTime);
 	}
 
-	private NodeValue startEvent(final XMLGregorianCalendar measurementTime) {
+	@Override
+	public NodeValue executeForOngoingEvent(final Object... params) {
+		return makeDateTime(startTime.get());
+	}
+
+	@Override
+	public NodeValue executeForNoEvent(final Object... params) {
+		return makeDateTime((XMLGregorianCalendar) params[0]);
+	}
+
+	@Override
+	public NodeValue executeForStartEvent(final Object... params) {
+		final XMLGregorianCalendar measurementTime = (XMLGregorianCalendar) params[0];
 		startTime.set(measurementTime);
 		return makeDateTime(measurementTime);
 	}
 
-	private NodeValue finishEvent() {
+	@Override
+	public NodeValue executeForFinishEvent(final Object... params) {
 		final NodeValue eventStart = makeDateTime(startTime.get());
-		startTime.set(xmlDatatypeFactory.newXMLGregorianCalendar());
+		startTime.set(initializeCalendar.get());
 		return eventStart;
+	}
+
+	@Override
+	public NodeValue exec(final NodeValue eventState, final NodeValue measurementTime) {
+		final XMLGregorianCalendar time = measurementTime.getDateTime();
+		return execute(eventState, time);
 	}
 }

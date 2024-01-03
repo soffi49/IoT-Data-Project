@@ -4,15 +4,30 @@ import static org.iotdata.constants.OutputDirectoriesConstants.UNSAFE_WORKERS_DA
 import static org.iotdata.constants.OutputDirectoriesConstants.UNSAFE_WORKER_EVENTS;
 import static org.iotdata.constants.dml.CamerasQueries.SELECT_CONSECUTIVE_UNSAFE_WORKERS_EVENTS;
 import static org.iotdata.constants.dml.CamerasQueries.SELECT_DAYS_WITH_UNSAFE_WORKERS;
+import static org.iotdata.enums.ArgumentType.PREV_MEASUREMENT_TIME;
+import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_INDICATOR;
+import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_LENGTH;
+import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_SAFE_COUNT;
+import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_START_TIME;
+import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_STATUS;
+import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_UNSAFE_COUNT;
+import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_UNSAFE_MAX;
+import static org.iotdata.enums.EventStateType.NO_EVENT;
 import static org.iotdata.enums.PrefixType.AIOT_P2;
 import static org.iotdata.enums.PrefixType.SOSA;
 import static org.iotdata.enums.PrefixType.XSD;
+import static org.iotdata.utils.CalendarInitializer.initializeCalendar;
 import static org.iotdata.utils.DirectoryFactory.removeDirectory;
+import static org.iotdata.utils.OutputWriter.storeResultsInSeparateFiles;
 import static org.iotdata.utils.OutputWriter.storeResultsInSingleFile;
 import static org.iotdata.utils.QueryExecutor.executeQuery;
-import static org.iotdata.utils.OutputWriter.storeResultsInSeparateFiles;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ResultSet;
@@ -21,6 +36,8 @@ import org.iotdata.domain.function.cameras.CountWorkers;
 import org.iotdata.domain.function.cameras.MapEventLength;
 import org.iotdata.domain.function.cameras.MapEventStartTime;
 import org.iotdata.domain.function.cameras.MapUnsafeEventState;
+import org.iotdata.domain.function.cameras.MaxUnsafeWorkers;
+import org.iotdata.enums.ArgumentType;
 
 /**
  * Class containing methods used to analyse the camera datasets
@@ -65,11 +82,31 @@ public class CamerasAnalyzer extends AbstractAnalyzer {
 	 */
 	private ResultSet detectUnsafeWorkersEvents(final Dataset dataset) {
 		final List<CustomFunction> functionsToRegister = List.of(
-				new MapUnsafeEventState(),
-				new MapEventLength(),
-				new MapEventStartTime(),
-				new CountWorkers()
+				new MapUnsafeEventState(
+						globalParameters.get(UNSAFE_WORKERS_EVENT_INDICATOR),
+						globalParameters.get(UNSAFE_WORKERS_EVENT_STATUS),
+						globalParameters.get(PREV_MEASUREMENT_TIME)
+				),
+				new MapEventLength(globalParameters.get(UNSAFE_WORKERS_EVENT_LENGTH)),
+				new MapEventStartTime(globalParameters.get(UNSAFE_WORKERS_EVENT_START_TIME)),
+				new CountWorkers(globalParameters.get(UNSAFE_WORKERS_EVENT_UNSAFE_COUNT), "unsafe"),
+				new CountWorkers(globalParameters.get(UNSAFE_WORKERS_EVENT_SAFE_COUNT), "safe"),
+				new MaxUnsafeWorkers(globalParameters.get(UNSAFE_WORKERS_EVENT_UNSAFE_MAX))
 		);
 		return executeQuery(dataset, SELECT_CONSECUTIVE_UNSAFE_WORKERS_EVENTS, functionsToRegister, SOSA, AIOT_P2, XSD);
+	}
+
+	@Override
+	protected Map<ArgumentType, Object> initializeGlobalParams() {
+		return Map.of(
+				UNSAFE_WORKERS_EVENT_LENGTH, new AtomicInteger(0),
+				UNSAFE_WORKERS_EVENT_INDICATOR, new AtomicInteger(0),
+				UNSAFE_WORKERS_EVENT_UNSAFE_MAX, new AtomicLong(0),
+				UNSAFE_WORKERS_EVENT_UNSAFE_COUNT, new AtomicLong(0),
+				UNSAFE_WORKERS_EVENT_SAFE_COUNT, new AtomicLong(0),
+				UNSAFE_WORKERS_EVENT_START_TIME, new AtomicReference<>(initializeCalendar.get()),
+				UNSAFE_WORKERS_EVENT_STATUS, new AtomicReference<>(NO_EVENT),
+				PREV_MEASUREMENT_TIME, new AtomicReference<Instant>(null)
+		);
 	}
 }

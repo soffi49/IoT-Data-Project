@@ -14,6 +14,11 @@ public interface CustomFunction {
 	String getName();
 
 	/**
+	 * @return initialized function with referenced parameters
+	 */
+	CustomFunction constructInitialized();
+
+	/**
 	 * @return full URI of custom function
 	 */
 	default String getUri() {
