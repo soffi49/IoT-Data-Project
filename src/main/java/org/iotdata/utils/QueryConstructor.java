@@ -9,6 +9,7 @@ import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.sparql.core.Prologue;
+import org.apache.jena.sparql.function.Function;
 import org.apache.jena.sparql.function.FunctionRegistry;
 import org.apache.jena.tdb2.TDB2;
 import org.iotdata.domain.function.CustomFunction;
@@ -53,7 +54,7 @@ public class QueryConstructor {
 
 	private static void appendFunctionsToQuery(final List<CustomFunction> functions) {
 		final FunctionRegistry functionRegistry = FunctionRegistry.get();
-		functions.forEach(func -> functionRegistry.put(func.getUri(), func.getClass()));
+		functions.forEach(func -> functionRegistry.put(func.getUri(), uri -> (Function) func.constructInitialized()));
 	}
 
 	private static QueryExecution getDatasetQueryExecution(final Query query, final Dataset dataset) {
