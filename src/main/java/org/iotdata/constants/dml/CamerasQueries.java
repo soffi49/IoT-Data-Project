@@ -5,17 +5,42 @@ package org.iotdata.constants.dml;
  */
 public class CamerasQueries {
 
-	public static final String SELECT_DAYS_WITH_UNSAFE_WORKERS = """
-			SELECT ?timeStamp ?unsafeWorkersNum
+	public static final String SELECT_AVERAGE_VALUES = """
+			SELECT (MIN(?timeStamp) as ?startTime)
+			       (MAX(?timeStamp) as ?endTime)
+			       (AVG(?unsafeWorkers) as ?unsafeWorkersAvg)
+			       (AVG(?safeWorkers) as ?safeWorkersAvg)
+			       (AVG(?indeterminateWorkers) as ?indeterminateWorkersAvg)
+			       (AVG(?confidence) as ?confidenceAvg)
 			WHERE {
 			?sub sosa:resultTime ?timeStamp ;
 			     sosa:hasResult ?resultNode.
 
-			?resultNode aiotp2:unsafeWorkersNum ?unsafeWorkersNum.
-
-			FILTER(?unsafeWorkersNum > 0)
+			?resultNode aiotp2:hasConfidence ?confidence;
+			            aiotp2:unsafeWorkersNum ?unsafeWorkers;
+			            aiotp2:safeWorkersNum ?safeWorkers;
+			            aiotp2:indeterminateWorkersNum ?indeterminateWorkers.
 			}
-			ORDER BY DESC(?unsafeWorkersNum)
+			""";
+
+	public static final String SELECT_AVERAGE_VALUES_NONZERO_CONFIDENCE = """
+			SELECT (MIN(?timeStamp) as ?startTime)
+			       (MAX(?timeStamp) as ?endTime)
+			       (AVG(?confidence) as ?confidenceAvg)
+			WHERE {
+			?sub sosa:resultTime ?timeStamp ;
+			     sosa:hasResult ?resultNode.
+
+			?resultNode aiotp2:hasConfidence ?confidence;
+			            aiotp2:unsafeWorkersNum ?unsafeWorkers;
+			            aiotp2:safeWorkersNum ?safeWorkers;
+			            aiotp2:indeterminateWorkersNum ?indeterminateWorkers.
+			            
+			FILTER(?confidence != 0 || 
+			       ?unsafeWorkers != 0 || 
+			       ?safeWorkers != 0 || 
+			       ?indeterminateWorkers != 0)
+			}
 			""";
 
 	public static final String SELECT_CONSECUTIVE_UNSAFE_WORKERS_EVENTS = """
@@ -37,7 +62,7 @@ public class CamerasQueries {
 			                   aiotp2:unsafeWorkersNum ?unsafeWorkers ;
 			                   aiotp2:safeWorkersNum ?safeWorkers.
 			                   
-			       BIND(func:mapUnsafeWorkersEventState(?status, ?measurementTime) as ?eventState)
+			       BIND(func:mapUnsafeWorkersEventState(?unsafeWorkers, ?measurementTime) as ?eventState)
 			       }
 			       ORDER BY ?measurementTime
 			    }

@@ -10,8 +10,11 @@ import static org.iotdata.enums.PrefixType.AIOT_P2;
 import static org.iotdata.enums.PrefixType.MEASURE;
 import static org.iotdata.enums.PrefixType.SCHEMA;
 import static org.iotdata.enums.PrefixType.SOSA;
-import static org.iotdata.utils.QueryExecutor.executeQuery;
 import static org.iotdata.utils.OutputWriter.storeResultsInSeparateFiles;
+import static org.iotdata.utils.QueryExecutor.executeQuery;
+
+import java.util.List;
+import java.util.function.Consumer;
 
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ResultSet;
@@ -26,18 +29,25 @@ public class TagsAnalyzer extends AbstractAnalyzer {
 	}
 
 	@Override
-	public void performAnalysis(final Dataset dataset) {
-		super.performAnalysis(dataset);
-
+	public List<Consumer<Dataset>> initializeAnalysisQueries() {
+		super.initializeAnalysisQueries();
 		final int index = indexOfSingularResultsFile.get();
-		storeResultsInSeparateFiles("results_identifier", selectUniqueIdentifiers(dataset), outputPath, index);
-		storeResultsInSeparateFiles("results_days_watch_connected", selectDaysWithWatchConnected(dataset), outputPath,
-				index);
-		storeResultsInSeparateFiles("results_days_heart_rate", selectDaysWithHeartRate(dataset), outputPath, index);
-		storeResultsInSeparateFiles("results_days_watch_battery_level", selectDaysWithWatchBatteryLevels(dataset),
-				outputPath, index);
-		storeResultsInSeparateFiles("result_days_alarm", selectDaysWithAlarm(dataset), outputPath, index);
-		storeResultsInSeparateFiles("result_days_locations", selectDaysWithLocations(dataset), outputPath, index);
+
+		return List.of(
+				dataset -> storeResultsInSeparateFiles("results_identifier",
+						selectUniqueIdentifiers(dataset), outputPath, index),
+				dataset -> storeResultsInSeparateFiles("results_days_watch_connected",
+						selectDaysWithWatchConnected(dataset), outputPath, index),
+				dataset -> storeResultsInSeparateFiles("results_days_heart_rate",
+						selectDaysWithHeartRate(dataset), outputPath, index),
+				dataset -> storeResultsInSeparateFiles("results_days_watch_battery_level",
+						selectDaysWithWatchBatteryLevels(dataset), outputPath, index),
+				dataset -> storeResultsInSeparateFiles("result_days_alarm",
+						selectDaysWithAlarm(dataset), outputPath, index),
+				dataset -> storeResultsInSeparateFiles("result_days_locations",
+						selectDaysWithLocations(dataset), outputPath, index)
+		);
+
 	}
 
 	/**

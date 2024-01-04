@@ -1,9 +1,11 @@
 package org.iotdata.domain.analyzer;
 
-import static org.iotdata.constants.OutputDirectoriesConstants.UNSAFE_WORKERS_DAYS;
+import static org.iotdata.constants.OutputDirectoriesConstants.AVERAGE_VALUES;
+import static org.iotdata.constants.OutputDirectoriesConstants.AVERAGE_VALUES_NON_ZERO;
 import static org.iotdata.constants.OutputDirectoriesConstants.UNSAFE_WORKER_EVENTS;
+import static org.iotdata.constants.dml.CamerasQueries.SELECT_AVERAGE_VALUES;
+import static org.iotdata.constants.dml.CamerasQueries.SELECT_AVERAGE_VALUES_NONZERO_CONFIDENCE;
 import static org.iotdata.constants.dml.CamerasQueries.SELECT_CONSECUTIVE_UNSAFE_WORKERS_EVENTS;
-import static org.iotdata.constants.dml.CamerasQueries.SELECT_DAYS_WITH_UNSAFE_WORKERS;
 import static org.iotdata.enums.ArgumentType.PREV_MEASUREMENT_TIME;
 import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_INDICATOR;
 import static org.iotdata.enums.ArgumentType.UNSAFE_WORKERS_EVENT_LENGTH;
@@ -18,7 +20,6 @@ import static org.iotdata.enums.PrefixType.SOSA;
 import static org.iotdata.enums.PrefixType.XSD;
 import static org.iotdata.utils.CalendarInitializer.initializeCalendar;
 import static org.iotdata.utils.DirectoryFactory.removeDirectory;
-import static org.iotdata.utils.OutputWriter.storeResultsInSeparateFiles;
 import static org.iotdata.utils.OutputWriter.storeResultsInSingleFile;
 import static org.iotdata.utils.QueryExecutor.executeQuery;
 
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ResultSet;
@@ -48,26 +50,44 @@ public class CamerasAnalyzer extends AbstractAnalyzer {
 		super(outputPath);
 
 		removeDirectory(outputPath, UNSAFE_WORKER_EVENTS);
-		removeDirectory(outputPath, UNSAFE_WORKERS_DAYS);
+		removeDirectory(outputPath, AVERAGE_VALUES);
+		removeDirectory(outputPath, AVERAGE_VALUES_NON_ZERO);
 	}
 
 	@Override
-	public void performAnalysis(final Dataset dataset) {
-		super.performAnalysis(dataset);
-		final int index = indexOfSingularResultsFile.get();
+	public List<Consumer<Dataset>> initializeAnalysisQueries() {
+		super.initializeAnalysisQueries();
 
-		storeResultsInSeparateFiles(UNSAFE_WORKERS_DAYS, selectDaysWithUnsafeWorkers(dataset), outputPath, index);
-		storeResultsInSingleFile(UNSAFE_WORKER_EVENTS, detectUnsafeWorkersEvents(dataset), outputPath);
+		return List.of(
+				dataset -> storeResultsInSingleFile(AVERAGE_VALUES,
+						selectAvgValues(dataset), outputPath),
+				dataset -> storeResultsInSingleFile(AVERAGE_VALUES_NON_ZERO,
+						selectAvgConfidenceWithoutZeros(dataset), outputPath),
+				dataset -> storeResultsInSingleFile(UNSAFE_WORKER_EVENTS,
+						detectUnsafeWorkersEvents(dataset), outputPath)
+		);
 	}
 
 	/**
-	 * Method selects days when unsafe workers were registered
+	 * Method computes average values of given measurements window
 	 *
 	 * @param dataset dataset on which query is to be executed
-	 * @return result set of unsafe workers
+	 * @return result set of average values
 	 */
-	private ResultSet selectDaysWithUnsafeWorkers(final Dataset dataset) {
-		return executeQuery(dataset, SELECT_DAYS_WITH_UNSAFE_WORKERS, SOSA, AIOT_P2);
+	private ResultSet selectAvgValues(final Dataset dataset) {
+		return executeQuery(dataset, SELECT_AVERAGE_VALUES, SOSA, AIOT_P2);
+	}
+
+	/**
+	 * Method computes average values of given measurements window where at leas one measurement value
+	 * is different from 0.
+	 *
+	 * @param dataset dataset on which query is to be executed
+	 * @return result set of average values different than zero
+	 */
+	private ResultSet selectAvgConfidenceWithoutZeros(final Dataset dataset) {
+
+		return executeQuery(dataset, SELECT_AVERAGE_VALUES_NONZERO_CONFIDENCE, SOSA, AIOT_P2);
 	}
 
 	/**

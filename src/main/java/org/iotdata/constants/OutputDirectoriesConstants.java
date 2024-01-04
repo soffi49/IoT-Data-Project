@@ -6,5 +6,6 @@ package org.iotdata.constants;
 public class OutputDirectoriesConstants {
 
 	public static final String UNSAFE_WORKER_EVENTS = "unsafe_workers_events";
-	public static final String UNSAFE_WORKERS_DAYS = "unsafe_workers_days";
+	public static final String AVERAGE_VALUES = "average_values";
+	public static final String AVERAGE_VALUES_NON_ZERO = "average_values_non_zero";
 }

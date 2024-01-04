@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ReadWrite;
@@ -18,7 +19,13 @@ import org.apache.jena.tdb2.TDB2Factory;
 import org.apache.pekko.Done;
 import org.apache.pekko.NotUsed;
 import org.apache.pekko.actor.ActorSystem;
+import org.apache.pekko.stream.FlowShape;
+import org.apache.pekko.stream.UniformFanInShape;
+import org.apache.pekko.stream.UniformFanOutShape;
+import org.apache.pekko.stream.javadsl.Balance;
 import org.apache.pekko.stream.javadsl.Flow;
+import org.apache.pekko.stream.javadsl.GraphDSL;
+import org.apache.pekko.stream.javadsl.Merge;
 import org.apache.pekko.stream.javadsl.Source;
 import org.iotdata.domain.analyzer.AbstractAnalyzer;
 import org.iotdata.enums.DatasetType;
@@ -64,9 +71,19 @@ public class RDFStreamProcessing {
 				.map(this::createModelFromTTL)
 				.sliding(maxBatchSize, 1);
 
-		final CompletionStage<Done> streamFinish = ttlStream.via(createModels).runForeach(this::processDataset, system);
-		streamFinish.thenRun(system::terminate);
+		final Flow<List<Model>, Dataset, NotUsed> createDataSet = Flow.<List<Model>> create()
+				.map(this::initializeDataSet);
 
+		final Flow<Dataset, Dataset, NotUsed> processQueriesInParallel =
+				Flow.fromGraph(GraphDSL.create(this::initializeQueriesProcessing));
+
+		final CompletionStage<Done> streamFinish = ttlStream
+				.via(createModels)
+				.via(createDataSet)
+				.via(processQueriesInParallel)
+				.run(system);
+
+		streamFinish.thenRun(system::terminate);
 	}
 
 	private Model createModelFromTTL(final Path path) {
@@ -77,17 +94,27 @@ public class RDFStreamProcessing {
 		return model;
 	}
 
-	private void processDataset(final List<Model> models) {
+	private Dataset initializeDataSet(final List<Model> models) {
 		final Dataset dataset = TDB2Factory.createDataset();
 		final AtomicInteger batchSize = new AtomicInteger(0);
 
 		models.forEach(model -> addNextModel(model, dataset, batchSize.incrementAndGet()));
-		dataset.begin(ReadWrite.READ);
-		try {
-			analyzer.performAnalysis(dataset);
-		} finally {
-			dataset.end();
-		}
+		return dataset;
+	}
+
+	private FlowShape<Dataset, Dataset> initializeQueriesProcessing(final GraphDSL.Builder<NotUsed> builder) {
+		final List<Flow<Dataset, Dataset, NotUsed>> analysisFlows = analyzer.prepareAnalysisFlows();
+		final int queriesNo = analysisFlows.size();
+
+		final UniformFanInShape<Dataset, Dataset> collectQueries = builder.add(Merge.create(queriesNo));
+		final UniformFanOutShape<Dataset, Dataset> dispatch = builder.add(Balance.create(queriesNo));
+
+		IntStream.range(0, queriesNo).forEach(idx ->
+				builder.from(dispatch.out(idx))
+						.via(builder.add(analysisFlows.get(idx)))
+						.toInlet(collectQueries.in(idx)));
+
+		return FlowShape.of(dispatch.in(), collectQueries.out());
 	}
 
 	private void addNextModel(final Model model, final Dataset dataset, final int currentBatchSize) {

@@ -1,11 +1,17 @@
 package org.iotdata.domain.analyzer;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import org.apache.jena.query.Dataset;
+import org.apache.jena.query.ReadWrite;
+import org.apache.pekko.NotUsed;
+import org.apache.pekko.stream.javadsl.Flow;
 import org.iotdata.enums.ArgumentType;
 
 /**
@@ -28,12 +34,28 @@ public abstract class AbstractAnalyzer {
 	}
 
 	/**
-	 * Method performs full analysis of the selected data set
-	 *
-	 * @param dataset dataset that is being analysed
+	 * Method prepares flow of analysis used later on in streaming.
 	 */
-	public void performAnalysis(final Dataset dataset) {
+	public List<Flow<Dataset, Dataset, NotUsed>> prepareAnalysisFlows() {
+		return initializeAnalysisQueries().stream()
+				.map(query -> Flow.of(Dataset.class).map(dataset -> {
+					dataset.begin(ReadWrite.READ);
+					try {
+						query.accept(dataset);
+					} finally {
+						dataset.end();
+					}
+					return dataset;
+				}))
+				.toList();
+	}
+
+	/**
+	 * Method returns list of methods accepting data set and performing partial query analysis
+	 */
+	public List<Consumer<Dataset>> initializeAnalysisQueries() {
 		indexOfSingularResultsFile.incrementAndGet();
+		return emptyList();
 	}
 
 	/**
