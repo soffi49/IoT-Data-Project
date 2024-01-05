@@ -9,7 +9,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.apache.jena.query.Dataset;
-import org.apache.jena.query.ReadWrite;
 import org.apache.pekko.NotUsed;
 import org.apache.pekko.stream.javadsl.Flow;
 import org.iotdata.enums.ArgumentType;
@@ -39,12 +38,7 @@ public abstract class AbstractAnalyzer {
 	public List<Flow<Dataset, Dataset, NotUsed>> prepareAnalysisFlows() {
 		return initializeAnalysisQueries().stream()
 				.map(query -> Flow.of(Dataset.class).map(dataset -> {
-					dataset.begin(ReadWrite.READ);
-					try {
-						query.accept(dataset);
-					} finally {
-						dataset.end();
-					}
+					query.accept(dataset);
 					return dataset;
 				}))
 				.toList();

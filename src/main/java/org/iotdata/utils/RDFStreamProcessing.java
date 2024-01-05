@@ -22,11 +22,11 @@ import org.apache.pekko.actor.ActorSystem;
 import org.apache.pekko.stream.FlowShape;
 import org.apache.pekko.stream.UniformFanInShape;
 import org.apache.pekko.stream.UniformFanOutShape;
-import org.apache.pekko.stream.javadsl.Balance;
+import org.apache.pekko.stream.javadsl.Broadcast;
 import org.apache.pekko.stream.javadsl.Flow;
 import org.apache.pekko.stream.javadsl.GraphDSL;
-import org.apache.pekko.stream.javadsl.Merge;
 import org.apache.pekko.stream.javadsl.Source;
+import org.apache.pekko.stream.javadsl.ZipWithN;
 import org.iotdata.domain.analyzer.AbstractAnalyzer;
 import org.iotdata.enums.DatasetType;
 import org.slf4j.Logger;
@@ -69,7 +69,7 @@ public class RDFStreamProcessing {
 
 		final Flow<Path, List<Model>, NotUsed> createModels = Flow.of(Path.class)
 				.map(this::createModelFromTTL)
-				.sliding(maxBatchSize, 1);
+				.sliding(maxBatchSize, 2);
 
 		final Flow<List<Model>, Dataset, NotUsed> createDataSet = Flow.<List<Model>> create()
 				.map(this::initializeDataSet);
@@ -97,8 +97,8 @@ public class RDFStreamProcessing {
 	private Dataset initializeDataSet(final List<Model> models) {
 		final Dataset dataset = TDB2Factory.createDataset();
 		final AtomicInteger batchSize = new AtomicInteger(0);
-
 		models.forEach(model -> addNextModel(model, dataset, batchSize.incrementAndGet()));
+		dataset.begin(ReadWrite.READ);
 		return dataset;
 	}
 
@@ -106,8 +106,9 @@ public class RDFStreamProcessing {
 		final List<Flow<Dataset, Dataset, NotUsed>> analysisFlows = analyzer.prepareAnalysisFlows();
 		final int queriesNo = analysisFlows.size();
 
-		final UniformFanInShape<Dataset, Dataset> collectQueries = builder.add(Merge.create(queriesNo));
-		final UniformFanOutShape<Dataset, Dataset> dispatch = builder.add(Balance.create(queriesNo));
+		final UniformFanInShape<Dataset, Dataset> collectQueries = builder.add(
+				ZipWithN.create(this::commitDataset, queriesNo));
+		final UniformFanOutShape<Dataset, Dataset> dispatch = builder.add(Broadcast.create(queriesNo));
 
 		IntStream.range(0, queriesNo).forEach(idx ->
 				builder.from(dispatch.out(idx))
@@ -115,6 +116,11 @@ public class RDFStreamProcessing {
 						.toInlet(collectQueries.in(idx)));
 
 		return FlowShape.of(dispatch.in(), collectQueries.out());
+	}
+
+	private Dataset commitDataset(List<Dataset> datasets) {
+		datasets.get(0).end();
+		return datasets.get(0);
 	}
 
 	private void addNextModel(final Model model, final Dataset dataset, final int currentBatchSize) {

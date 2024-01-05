@@ -1,6 +1,6 @@
-package org.iotdata.domain.function.cameras;
+package org.iotdata.domain.function.cameras.unsafeevent;
 
-import static java.lang.Math.max;
+import static org.apache.commons.lang3.StringUtils.capitalize;
 import static org.apache.jena.sparql.expr.NodeValue.makeInteger;
 
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,29 +12,30 @@ import org.iotdata.domain.function.CustomFunction;
 /**
  * Function used to count the number of workers of specific type detected by the camera
  */
-public class MaxUnsafeWorkers extends FunctionBase2 implements CameraAggregationFunction {
+public class CountWorkersPerSafety extends FunctionBase2 implements CameraAggregationFunction {
 
-	final AtomicLong currentMaxValue;
+	final AtomicLong currentWorkersCount;
+	final String counterTypeName;
 
-	public MaxUnsafeWorkers(final Object... params) {
+	public CountWorkersPerSafety(final Object... params) {
 		super();
-		this.currentMaxValue = (AtomicLong) params[0];
+		this.currentWorkersCount = (AtomicLong) params[0];
+		this.counterTypeName = (String) params[1];
 	}
 
 	@Override
 	public String getName() {
-		return "maxUnsafeWorkers";
+		return "countWorkers" + capitalize(counterTypeName);
 	}
 
 	@Override
 	public CustomFunction constructInitialized() {
-		return new MaxUnsafeWorkers(currentMaxValue);
+		return new CountWorkersPerSafety(currentWorkersCount, counterTypeName);
 	}
 
 	@Override
 	public NodeValue executeForOngoingEvent(final Object... params) {
-		final long workersNumber = (long) params[0];
-		return makeInteger(currentMaxValue.updateAndGet(currVal -> max(currVal, workersNumber)));
+		return makeInteger(currentWorkersCount.addAndGet((long) params[0]));
 	}
 
 	@Override
@@ -45,17 +46,15 @@ public class MaxUnsafeWorkers extends FunctionBase2 implements CameraAggregation
 	@Override
 	public NodeValue executeForStartEvent(final Object... params) {
 		final long workersNumber = (long) params[0];
-		currentMaxValue.set(workersNumber);
+		currentWorkersCount.set(workersNumber);
 		return makeInteger(workersNumber);
 	}
 
 	@Override
 	public NodeValue executeForFinishEvent(final Object... params) {
 		final long workersNumber = (long) params[0];
-		final long newMaxValue = currentMaxValue.updateAndGet(currVal -> max(currVal, workersNumber));
-
-		final NodeValue finalWorkersCount = makeInteger(newMaxValue);
-		currentMaxValue.set(0);
+		final NodeValue finalWorkersCount = makeInteger(currentWorkersCount.addAndGet(workersNumber));
+		currentWorkersCount.set(0);
 		return finalWorkersCount;
 	}
 
