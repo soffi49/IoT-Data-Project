@@ -1,4 +1,4 @@
-package org.iotdata.domain.function.cameras;
+package org.iotdata.domain.function.cameras.unsafeevent;
 
 import org.apache.jena.sparql.expr.NodeValue;
 import org.iotdata.domain.function.CustomFunction;
