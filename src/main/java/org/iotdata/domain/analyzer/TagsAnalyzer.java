@@ -34,7 +34,6 @@ import java.util.function.Consumer;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.ResultSet;
 import org.iotdata.domain.function.CustomFunction;
-import org.iotdata.domain.function.tags.ClassifyHeartRate;
 import org.iotdata.domain.function.tags.MapAlarmEvent;
 import org.iotdata.domain.function.tags.MapDisconnectedEvent;
 import org.iotdata.domain.function.tags.MapAbnormalHeartRateEvent;
@@ -100,8 +99,7 @@ public class TagsAnalyzer extends AbstractAnalyzer {
 				new MapAbnormalHeartRateEvent(
 						globalParameters.get(ABNORMAL_HEART_RATE),
 						globalParameters.get(ABNORMAL_HEART_RATE_START_TIME)
-				),
-				new ClassifyHeartRate()
+				)
 		);
 		return executeQuery(dataset, SELECT_ABNORMAL_HEART_RATE_EVENTS, functionsToRegister, SOSA, AIOT_P2, MEASURE, SCHEMA);
 	}

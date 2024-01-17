@@ -60,7 +60,6 @@ public class TagsQueries {
 					}
 				}
 				BIND(func:mapHighHeartRateEventTime(?identifier, ?timeStamp, ?heartRate) as ?startTime)
-				BIND(func:classifyHeartRate(?heartRate) as ?heartRateIndicator)
 				BIND((?timeStamp - ?startTime) as ?duration)
 				FILTER(?heartRate != 0 && ?startTime != ?timeStamp && day(?duration) < 1 &&
 						SUBSTR(STR(?duration), 1, 3) != "-PT")
@@ -68,28 +67,43 @@ public class TagsQueries {
 			""";
 
 	public static final String SELECT_MAX_MIN_HEART_RATE = """
-			SELECT ?identifier
-					(MIN(?timeStamp) AS ?beginInterval)
-					(MAX(?timeStamp) AS ?endInterval)
-					(MIN(?heartRate) AS ?minHeartRate)
-					(MAX(?heartRate) AS ?maxHeartRate)
+			SELECT ?identifier ?beginInterval ?endInterval ?minHeartRate ?maxHeartRate ?highHeartRateInd ?lowHeartRateInd
 			WHERE {
-			?subject schema:identifier ?identifier ;
-				sosa:hosts ?sensor .
-				
-			?sensor sosa:madeObservation ?observation .
-			
-			?observation a sosa:Observation ;
-				sosa:resultTime ?timeStamp ;
-				sosa:hasResult ?resultNode .
-				
-			?resultNode a msr:Measure ;
-				msr:Unit aiotp2:bpm ;
-				msr:hasNumericalValue ?heartRate .
-			
-			FILTER (?heartRate != 0)
+				{
+				SELECT ?identifier
+						(MIN(?timeStamp) AS ?beginInterval)
+						(MAX(?timeStamp) AS ?endInterval)
+						(MIN(?heartRate) AS ?minHeartRate)
+						(MAX(?heartRate) AS ?maxHeartRate)
+				WHERE {
+				?subject schema:identifier ?identifier ;
+					sosa:hosts ?sensor .
+					
+				?sensor sosa:madeObservation ?observation .
+							
+				?observation a sosa:Observation ;
+					sosa:resultTime ?timeStamp ;
+					sosa:hasResult ?resultNode .
+					
+				?resultNode a msr:Measure ;
+					msr:Unit aiotp2:bpm ;
+					msr:hasNumericalValue ?heartRate .
+							
+				FILTER (?heartRate != 0)
+				}
+				GROUP BY ?identifier
+				}
+			BIND (
+			  COALESCE(
+				IF(?maxHeartRate > 100, "BAD", 1/0),
+			    "GOOD"
+			  ) AS ?highHeartRateInd)
+			BIND (
+			  COALESCE(
+				IF(?minHeartRate < 60, "BAD", 1/0),
+			    "GOOD"
+			  ) AS ?lowHeartRateInd)
 			}
-			GROUP BY ?identifier
 			""";
 
 	public static final String SELECT_ALARM_EVENTS  = """
