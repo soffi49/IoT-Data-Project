@@ -1,4 +1,4 @@
-package org.iotdata.domain.function.cameras;
+package org.iotdata.domain.function.cameras.unsafeevent;
 
 import static java.lang.Math.abs;
 import static java.time.Duration.between;
