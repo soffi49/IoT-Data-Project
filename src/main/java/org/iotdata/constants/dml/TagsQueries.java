@@ -4,33 +4,75 @@ package org.iotdata.constants.dml;
  * Class containing queries used to analyse tags dataset
  */
 public class TagsQueries {
-	public static final String SELECT_UNIQUE_IDENTIFIERS = """
-			SELECT DISTINCT ?identifier
-			WHERE
-			{?subject schema:identifier ?identifier}
-			""";
-
-	public static final String SELECT_DAYS_WITH_WATCH_CONNECTED = """
-			SELECT ?timeStamp ?isConnected ?identifier
+	public static final String SELECT_DISCONNECTED_WATCH_EVENTS  = """
+			SELECT ?identifier
+					?startTime
+					(?timeStamp AS ?finishTime)
+					?duration
 			WHERE {
-			?subject schema:identifier ?identifier ;
-				sosa:hosts ?sensor .
-				
-			?sensor sosa:madeObservation ?observation .
-			
-			?observation a sosa:Observation ;
-				sosa:resultTime ?timeStamp ;
-				sosa:hasResult ?resultNode .
-				
-			?resultNode a aiotp2:TagMetadataResult ;
-				aiotp2:hasWatchConnected ?isConnected .
-				
-			FILTER (?isConnected = true)
+				{
+					SELECT ?timeStamp
+					   	   ?connectionStatus
+					       ?identifier
+					WHERE {
+					?subject schema:identifier ?identifier ;
+						sosa:hosts ?sensor .
+
+					?sensor sosa:madeObservation ?observation .
+
+					?observation a sosa:Observation ;
+						sosa:resultTime ?timeStamp ;
+						sosa:hasResult ?resultNode .
+
+					?resultNode a aiotp2:TagMetadataResult ;
+						aiotp2:hasWatchConnected ?connectionStatus .
+					}
+				}
+				BIND(func:mapDisconnectedEventTime(?identifier, ?timeStamp, ?connectionStatus) as ?startTime)
+				BIND((?timeStamp - ?startTime) as ?duration)
+				FILTER(?startTime != ?timeStamp && day(?duration) < 1 && SUBSTR(STR(?duration), 1, 3) != "-PT")
 			}
 			""";
 
-	public static final String SELECT_DAYS_WITH_HEART_RATE = """
-			SELECT ?timeStamp ?heartRate ?identifier
+	public static final String SELECT_ABNORMAL_HEART_RATE_EVENTS = """
+			SELECT ?identifier
+					?startTime
+					(?timeStamp AS ?finishTime)
+					?duration
+			WHERE {
+				{
+					SELECT ?timeStamp
+					   	   ?heartRate
+					       ?identifier
+					WHERE {
+					?subject schema:identifier ?identifier ;
+						sosa:hosts ?sensor .
+
+					?sensor sosa:madeObservation ?observation .
+
+					?observation a sosa:Observation ;
+						sosa:resultTime ?timeStamp ;
+						sosa:hasResult ?resultNode .
+
+					?resultNode a msr:Measure ;
+						msr:Unit aiotp2:bpm ;
+						msr:hasNumericalValue ?heartRate .
+					}
+				}
+				BIND(func:mapHighHeartRateEventTime(?identifier, ?timeStamp, ?heartRate) as ?startTime)
+				BIND(func:classifyHeartRate(?heartRate) as ?heartRateIndicator)
+				BIND((?timeStamp - ?startTime) as ?duration)
+				FILTER(?heartRate != 0 && ?startTime != ?timeStamp && day(?duration) < 1 &&
+						SUBSTR(STR(?duration), 1, 3) != "-PT")
+			}
+			""";
+
+	public static final String SELECT_MAX_MIN_HEART_RATE = """
+			SELECT ?identifier
+					(MIN(?timeStamp) AS ?beginInterval)
+					(MAX(?timeStamp) AS ?endInterval)
+					(MIN(?heartRate) AS ?minHeartRate)
+					(MAX(?heartRate) AS ?maxHeartRate)
 			WHERE {
 			?subject schema:identifier ?identifier ;
 				sosa:hosts ?sensor .
@@ -44,27 +86,43 @@ public class TagsQueries {
 			?resultNode a msr:Measure ;
 				msr:Unit aiotp2:bpm ;
 				msr:hasNumericalValue ?heartRate .
-			}
-			""";
-
-	public static final String SELECT_DAYS_WITH_WATCH_BATTERY_LEVELS = """
-			SELECT ?timeStamp ?batteryLevel ?identifier
-			WHERE {
-			?subject schema:identifier ?identifier ;
-				sosa:hosts ?sensor .
-				
-			?sensor sosa:madeObservation ?observation .
 			
-			?observation a sosa:Observation ;
-				sosa:resultTime ?timeStamp ;
-				sosa:hasResult ?resultNode .
-				
-			?resultNode a aiotp2:TagMetadataResult ;
-				aiotp2:hasWatchBatteryLevel ?batteryLevel .
+			FILTER (?heartRate != 0)
+			}
+			GROUP BY ?identifier
+			""";
+
+	public static final String SELECT_ALARM_EVENTS  = """
+			SELECT ?identifier
+					?startTime
+					(?timeStamp AS ?finishTime)
+					?duration
+			WHERE {
+				{
+					SELECT ?timeStamp
+					   	   ?alarmStatus
+					       ?identifier
+					WHERE {
+					?subject schema:identifier ?identifier ;
+						sosa:hosts ?sensor .
+
+					?sensor sosa:madeObservation ?observation .
+
+					?observation a sosa:Observation ;
+						sosa:resultTime ?timeStamp ;
+						sosa:hasResult ?resultNode .
+						
+					?resultNode a aiotp2:TagMetadataResult ;
+						aiotp2:hasAlarm ?alarmStatus .
+					}
+				}
+				BIND(func:mapAlarmEvent(?identifier, ?timeStamp, ?alarmStatus) as ?startTime)
+				BIND((?timeStamp - ?startTime) as ?duration)
+				FILTER(?startTime != ?timeStamp && day(?duration) < 1 && SUBSTR(STR(?duration), 1, 3) != "-PT")
 			}
 			""";
 
-	public static final String SELECT_DAYS_WITH_ALARM = """
+	public static final String SELECT_COUNT_ALARM_TRIGGERS = """
 			SELECT ?timeStamp ?alarm ?identifier
 			WHERE {
 			?subject schema:identifier ?identifier ;
@@ -79,42 +137,7 @@ public class TagsQueries {
 			?resultNode a aiotp2:TagMetadataResult ;
 				aiotp2:hasAlarm ?alarm .
 			
-			}
-			""";
-
-	public static final String SELECT_DAYS_WITH_LOCATIONS = """
-			SELECT ?timeStamp ?xValue ?yValue ?zValue ?accuracyValue ?identifier
-			WHERE {
-				?subject schema:identifier ?identifier ;
-				sosa:hosts ?sensor .
-				
-			?sensor sosa:madeObservation ?observation .
-			
-			?observation a sosa:Observation ;
-				sosa:resultTime ?timeStamp ;
-				sosa:hasResult ?resultNode .
-				
-			?resultNode a aiotp2:BIMLocation ;
-				aiotp2:hasXValue ?xValueNode ;
-				aiotp2:hasYValue ?yValueNode ;
-				aiotp2:hasZValue ?zValueNode ;
-				aiotp2:hasAccuracyValue ?accuracyValueNode .
-				
-			?xValueNode a msr:Measure ;
-				msr:Unit msr:millimetre ;
-				msr:hasNumericalValue ?xValue .
-				
-			?yValueNode a msr:Measure ;
-				msr:Unit msr:millimetre ;
-				msr:hasNumericalValue ?yValue .
-				
-			?zValueNode a msr:Measure ;
-				msr:Unit msr:millimetre ;
-				msr:hasNumericalValue ?zValue .
-				
-			?accuracyValueNode a msr:Measure ;
-				msr:Unit msr:millimetre ;
-				msr:hasNumericalValue ?accuracyValue .
+			FILTER(?alarm = true)
 			}
 			""";
 }
