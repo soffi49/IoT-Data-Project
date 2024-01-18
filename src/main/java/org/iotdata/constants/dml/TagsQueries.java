@@ -10,27 +10,21 @@ public class TagsQueries {
 					(?timeStamp AS ?finishTime)
 					?duration
 			WHERE {
-				{
-					SELECT ?timeStamp
-					   	   ?connectionStatus
-					       ?identifier
-					WHERE {
-					?subject schema:identifier ?identifier ;
-						sosa:hosts ?sensor .
+				?subject schema:identifier ?identifier ;
+					sosa:hosts ?sensor .
 
-					?sensor sosa:madeObservation ?observation .
+				?sensor sosa:madeObservation ?observation .
 
-					?observation a sosa:Observation ;
-						sosa:resultTime ?timeStamp ;
-						sosa:hasResult ?resultNode .
+				?observation a sosa:Observation ;
+					sosa:resultTime ?timeStamp ;
+					sosa:hasResult ?resultNode .
 
-					?resultNode a aiotp2:TagMetadataResult ;
-						aiotp2:hasWatchConnected ?connectionStatus .
-					}
-				}
+				?resultNode a aiotp2:TagMetadataResult ;
+					aiotp2:hasWatchConnected ?connectionStatus .
+
 				BIND(func:mapDisconnectedEventTime(?identifier, ?timeStamp, ?connectionStatus) as ?startTime)
 				BIND((?timeStamp - ?startTime) as ?duration)
-				FILTER(?startTime != ?timeStamp && day(?duration) < 1 && SUBSTR(STR(?duration), 1, 3) != "-PT")
+				FILTER(?startTime != ?timeStamp && day(?duration) < 1 && !STRSTARTS(STR(?duration), "-"))
 			}
 			""";
 
@@ -62,7 +56,7 @@ public class TagsQueries {
 				BIND(func:mapHighHeartRateEventTime(?identifier, ?timeStamp, ?heartRate) as ?startTime)
 				BIND((?timeStamp - ?startTime) as ?duration)
 				FILTER(?heartRate != 0 && ?startTime != ?timeStamp && day(?duration) < 1 &&
-						SUBSTR(STR(?duration), 1, 3) != "-PT")
+						!STRSTARTS(STR(?duration), "-"))
 			}
 			""";
 
@@ -132,12 +126,13 @@ public class TagsQueries {
 				}
 				BIND(func:mapAlarmEvent(?identifier, ?timeStamp, ?alarmStatus) as ?startTime)
 				BIND((?timeStamp - ?startTime) as ?duration)
-				FILTER(?startTime != ?timeStamp && day(?duration) < 1 && SUBSTR(STR(?duration), 1, 3) != "-PT")
+				FILTER(?startTime != ?timeStamp && day(?duration) < 1 && !STRSTARTS(STR(?duration), "-"))
 			}
 			""";
 
 	public static final String SELECT_COUNT_ALARM_TRIGGERS = """
-			SELECT ?timeStamp ?alarm ?identifier
+			SELECT ?identifier (MIN(?timeStamp) AS ?beginInterval)
+				(MAX(?timeStamp) AS ?endInterval)  (COUNT(*) as ?count)
 			WHERE {
 			?subject schema:identifier ?identifier ;
 				sosa:hosts ?sensor .
@@ -153,5 +148,6 @@ public class TagsQueries {
 			
 			FILTER(?alarm = true)
 			}
+			GROUP BY ?identifier
 			""";
 }

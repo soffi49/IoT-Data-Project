@@ -11,11 +11,11 @@ import org.iotdata.domain.function.CustomFunction;
 /**
  * Abstract event class used implemented by MapAlarmEvent, MapDisconnectedEvent and MapAbnormalHeartRateEvent
  */
-public abstract class MapAbstractEvent extends FunctionBase3 implements CustomFunction {
+public abstract class TagEventMapper extends FunctionBase3 implements CustomFunction {
 	final ConcurrentHashMap<String, XMLGregorianCalendar> startTimeMap;
 	final AtomicReference<XMLGregorianCalendar> startTime;
 
-	protected MapAbstractEvent(final Object ...params) {
+	protected TagEventMapper(final Object ...params) {
 		super();
 		this.startTimeMap = (ConcurrentHashMap<String, XMLGregorianCalendar>) params[0];
 		this.startTime = (AtomicReference<XMLGregorianCalendar>) params[1];
@@ -26,16 +26,18 @@ public abstract class MapAbstractEvent extends FunctionBase3 implements CustomFu
 		return this;
 	}
 
+	public abstract boolean isObservationWithinEvent(final NodeValue observationParameter);
+
 	@Override
-	public NodeValue exec(final NodeValue identifier, final NodeValue timeStamp, final NodeValue status) {
+	public NodeValue exec(final NodeValue identifier, final NodeValue timeStamp, final NodeValue observationParameter) {
 		boolean keyExists = startTimeMap.containsKey(identifier.getString());
-		boolean isStatus = status.getBoolean();
+		boolean isWithinEvent = isObservationWithinEvent(observationParameter);
 
 		startTime.set(timeStamp.getDateTime());
 
-		if (!keyExists && isStatus) {
+		if (!keyExists && isWithinEvent) {
 			startTimeMap.put(identifier.getString(), timeStamp.getDateTime());
-		} else if (keyExists && !isStatus) {
+		} else if (keyExists && !isWithinEvent) {
 			startTime.set(startTimeMap.get(identifier.getString()));
 			startTimeMap.remove(identifier.getString());
 		}
