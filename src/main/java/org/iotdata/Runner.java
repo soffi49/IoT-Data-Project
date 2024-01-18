@@ -8,7 +8,7 @@ import org.iotdata.utils.RDFStreamProcessing;
 public class Runner {
 	public static void main(String[] args) {
 		final ConfigurationProps configurator = new ConfigurationProps();
-		final RDFStreamProcessing streamProcessor = new RDFStreamProcessing(CAMERAS, configurator.getBatchSize(),
+		final RDFStreamProcessing streamProcessor = new RDFStreamProcessing(TAGS, configurator.getBatchSize(),
 				configurator.getOutputPath(), configurator.getInputPath());
 		streamProcessor.processRDFStream();
 	}
