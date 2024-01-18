@@ -1,4 +1,4 @@
-package org.iotdata.domain.function.cameras;
+package org.iotdata.domain.function.cameras.unsafeevent;
 
 import static org.apache.jena.sparql.expr.NodeValue.makeInteger;
 
@@ -11,23 +11,23 @@ import org.iotdata.domain.function.CustomFunction;
 /**
  * Function used to aggregate the number of consecutive measurements indicating that series of unsafe workers were detected
  */
-public class MapEventLength extends FunctionBase1 implements CameraAggregationFunction {
+public class MapUnsafeEventLength extends FunctionBase1 implements CameraAggregationFunction {
 
 	final AtomicInteger eventLength;
 
-	public MapEventLength(final Object... params) {
+	public MapUnsafeEventLength(final Object... params) {
 		super();
 		this.eventLength = (AtomicInteger) params[0];
 	}
 
 	@Override
 	public String getName() {
-		return "mapEventLength";
+		return "mapUnsafeEventLength";
 	}
 
 	@Override
 	public CustomFunction constructInitialized() {
-		return new MapEventLength(eventLength);
+		return new MapUnsafeEventLength(eventLength);
 	}
 
 	@Override

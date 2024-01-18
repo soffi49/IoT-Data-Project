@@ -1,4 +1,4 @@
-package org.iotdata.domain.function.cameras;
+package org.iotdata.domain.function.cameras.unsafeevent;
 
 import static org.apache.jena.sparql.expr.NodeValue.makeDateTime;
 import static org.iotdata.utils.CalendarInitializer.initializeCalendar;
@@ -15,23 +15,23 @@ import org.iotdata.domain.function.CustomFunction;
  * Function used to map the time of first measurement after which consecutive measurements
  * indicating series of unsafe workers were detected
  */
-public class MapEventStartTime extends FunctionBase2 implements CameraAggregationFunction {
+public class MapUnsafeEventStartTime extends FunctionBase2 implements CameraAggregationFunction {
 
 	final AtomicReference<XMLGregorianCalendar> startTime;
 
-	public MapEventStartTime(final Object... params) {
+	public MapUnsafeEventStartTime(final Object... params) {
 		super();
 		this.startTime = (AtomicReference<XMLGregorianCalendar>) params[0];
 	}
 
 	@Override
 	public String getName() {
-		return "mapEventStartTime";
+		return "mapUnsafeEventStartTime";
 	}
 
 	@Override
 	public CustomFunction constructInitialized() {
-		return new MapEventStartTime(startTime);
+		return new MapUnsafeEventStartTime(startTime);
 	}
 
 	@Override

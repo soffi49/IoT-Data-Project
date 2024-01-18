@@ -43,14 +43,53 @@ public class CamerasQueries {
 			}
 			""";
 
+	public static final String SELECT_CONFIDENCE_PER_OBSERVATION_TYPE = """
+			SELECT ?confidenceAvg
+			       ?confidenceForUnsafeWorkers
+			       ?confidenceSafeWorkers
+			       ?confidenceIndeterminateWorkers
+			       ?confidenceNoneObserved
+			       ?confidenceLevel
+			       ?time
+			WHERE {
+			    {
+			        SELECT (AVG(?confidence) as ?confidenceAvg)
+			               (SAMPLE(?resultNode) as ?node)
+			               (MIN(?timeStamp) as ?time)
+			        WHERE {
+			        ?sub sosa:resultTime ?timeStamp ;
+			             sosa:hasResult ?resultNode.
+			        
+			        ?resultNode aiotp2:hasConfidence ?confidence.
+			        }
+			    }
+			?node aiotp2:unsafeWorkersNum ?unsafeWorkers;
+			      aiotp2:safeWorkersNum ?safeWorkers;
+			      aiotp2:indeterminateWorkersNum ?indeterminateWorkers.
+			            
+			BIND(IF(?unsafeWorkers > 0, 1, 0) as ?confidenceForUnsafeWorkers)
+			BIND(IF(?safeWorkers > 0, 1, 0) as ?confidenceSafeWorkers)
+			BIND(IF(?indeterminateWorkers > 0, 1, 0) as ?confidenceIndeterminateWorkers)
+			BIND(IF(?unsafeWorkers = 0 && ?safeWorkers = 0 && ?indeterminateWorkers = 0, 1, 0) as ?confidenceNoneObserved)
+			BIND (
+			  COALESCE(
+			    IF(?confidenceAvg >= 85, "HIGH", 1/0),
+			    IF(?confidenceAvg >= 50, "MEDIUM", 1/0),
+			    IF(?confidenceAvg != 0, "LOW", 1/0),
+			    "NONE"
+			  ) AS ?confidenceLevel
+			)
+			}
+			""";
+
 	public static final String SELECT_CONSECUTIVE_UNSAFE_WORKERS_EVENTS = """
 			SELECT ?eventStart ?eventFinish ?duration ?eventLength ?unsafeWorkersSum ?safeWorkersSum ?maxUnsafeWorkers
 			WHERE {
 			    {
 			      SELECT ?measurementTime
 			             ?eventState
-			             (func:mapEventLength(?eventState) as ?eventLength)
-			             (func:mapEventStartTime(?eventState, ?measurementTime) as ?initialStart)
+			             (func:mapUnsafeEventLength(?eventState) as ?eventLength)
+			             (func:mapUnsafeEventStartTime(?eventState, ?measurementTime) as ?initialStart)
 			             (func:maxUnsafeWorkers(?eventState, ?unsafeWorkers) as ?maxUnsafeWorkers)
 			             (func:countWorkersUnsafe(?eventState, ?unsafeWorkers) as ?unsafeWorkersSum)
 			             (func:countWorkersSafe(?eventState, ?safeWorkers) as ?safeWorkersSum)
@@ -72,6 +111,27 @@ public class CamerasQueries {
 			    BIND(IF(?measurementTime < ?initialStart, ?initialStart, ?measurementTime) as ?eventFinish)
 			    BIND(IF(?measurementTime < ?initialStart, ?measurementTime, ?initialStart) as ?eventStart)
 			    BIND((?eventFinish - ?eventStart) as ?duration)
+			}
+			""";
+
+	public static final String SELECT_CONSECUTIVE_INDETERMINATE_WORKERS_EVENTS = """
+			SELECT ?measurementTime ?indeterminateWorkersCount ?eventLength
+			WHERE {
+			    {
+			      SELECT ?measurementTime
+			             ?eventLength
+			             (func:countIndeterminateWorkers(?eventLength, ?indeterminateWorkers) as ?indeterminateWorkersCount)
+			      WHERE {
+			       ?sub sosa:resultTime ?measurementTime ;
+			            sosa:hasResult ?resultNode.
+			            		     
+			       ?resultNode aiotp2:indeterminateWorkersNum ?indeterminateWorkers.
+			                   
+			       BIND(func:mapIndeterminateWorkersEventLength(?indeterminateWorkers, ?measurementTime) as ?eventLength)
+			       }
+			       ORDER BY ?measurementTime
+			    }
+			    FILTER(?eventLength > 3)
 			}
 			""";
 
